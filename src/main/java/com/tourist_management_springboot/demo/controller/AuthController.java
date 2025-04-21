@@ -19,6 +19,8 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.HashSet;
@@ -30,6 +32,7 @@ import java.util.stream.Collectors;
 @RestController
 @RequestMapping("/api/auth")
 public class AuthController {
+    private static final Logger logger = LoggerFactory.getLogger(AuthController.class);
     @Autowired
     AuthenticationManager authenticationManager;
 
@@ -67,18 +70,22 @@ public class AuthController {
 
     @PostMapping("/signup")
     public ResponseEntity<?> registerUser(@Valid @RequestBody SignupRequest signUpRequest) {
+        logger.info("Received signup request for username: {} and email: {}", signUpRequest.getUsername(), signUpRequest.getEmail());
+        logger.info("Checking if username exists: {}", signUpRequest.getUsername());
         if (userRepository.existsByUsername(signUpRequest.getUsername())) {
             return ResponseEntity
                     .badRequest()
                     .body(new MessageResponse("Error: Username is already taken!"));
         }
 
+        logger.info("Checking if email exists: {}", signUpRequest.getEmail());
         if (userRepository.existsByEmail(signUpRequest.getEmail())) {
             return ResponseEntity
                     .badRequest()
                     .body(new MessageResponse("Error: Email is already in use!"));
         }
 
+        logger.info("Creating new user object");
         // Create new user's account
         User user = new User();
         user.setUsername(signUpRequest.getUsername());
@@ -90,6 +97,7 @@ public class AuthController {
         user.setFullName(signUpRequest.getFirstName() + " " + signUpRequest.getLastName());
 
         Set<String> strRoles = signUpRequest.getRoles();
+        logger.info("Roles from signup request: {}", strRoles);
         Set<Role> roles = new HashSet<>();
 
         if (strRoles == null) {
@@ -119,6 +127,7 @@ public class AuthController {
 
         user.setRoles(roles);
         userRepository.save(user);
+        logger.info("User saved to database: {}", user.getUsername());
 
         return ResponseEntity.ok(new MessageResponse("User registered successfully!"));
     }
